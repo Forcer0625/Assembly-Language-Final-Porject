@@ -4,8 +4,8 @@ use C or C++ to develop a 2-Pass Assembler
 
 Input File:
 
-    Source statement請使用附檔的source.txt
-    Operation code 請使用附檔的opcode.txt
+    Source statement    請使用附檔的source.txt
+    Operation code      請使用附檔的opcode.txt
 Output:
 
     pass1 : 完成後須輸出 location & symbol table
