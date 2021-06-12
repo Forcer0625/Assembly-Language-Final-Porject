@@ -94,7 +94,7 @@ class OperationCode
                 operation[i].codestr[1]=num2;
                 operation[i].codestr[2]='\0';
                 operation[i].code=                          //store operation code
-                StrAdd_To_unsiginedInt(operation[i].codestr); 
+                StrToInt(operation[i].codestr); 
 
             }
             
