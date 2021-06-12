@@ -2,8 +2,6 @@
 #include<cstdio>
 #include<iostream>
 #include<string.h>
-#include<cmath>
-
 using namespace std;
 
 #define SOURCE "source.txt"
@@ -82,59 +80,6 @@ struct Operation
 class OperationCode
 {
     private : 
-        unsigned int StrAdd_To_unsiginedInt(const char address[])   //only work for 2 hex bit 
-        {
-            unsigned int re=0;
-            switch (address[0])
-            {
-                case 'A':
-                    re+=(10*16);
-                    break;
-                case 'B':
-                    re+=(11*16);
-                    break;
-                case 'C':
-                    re+=(12*16);
-                    break;
-                case 'D':
-                    re+=(13*16);
-                    break;
-                case 'E':
-                    re+=(14*16);
-                    break;
-                case 'F':
-                    re+=(15*16);
-                    break;
-                default:
-                    re+=((address[0] - '0') * 16);
-                    break;
-            }
-            switch (address[1])
-            {
-                case 'A':
-                    re+=10;
-                    break;
-                case 'B':
-                    re+=11;
-                    break;
-                case 'C':
-                    re+=12;
-                    break;
-                case 'D':
-                    re+=13;
-                    break;
-                case 'E':
-                    re+=14;
-                    break;
-                case 'F':
-                    re+=15;
-                    break;
-                default:
-                    re+=address[1] - '0';
-                    break;
-            }
-            return re;
-        }
         Operation *operation;
     public :
         OperationCode() = default;
@@ -241,6 +186,16 @@ class SymbolTable
             for(temp=head;temp->next;temp=temp->next);
             return temp;
         }
+        void del()
+        {
+            while(head)
+            {
+                Symbol* temp=head->next;
+                free(head);
+                head=temp;
+            }
+            free(this);
+        }
 
 };
 //This Function will create program location and symbol table.
@@ -249,7 +204,7 @@ void Pass1(const char* _SourceFileName)
     //Create Operation Table and Symbol Table
     OperationCode* OpTable=(OperationCode*)malloc(sizeof(OperationCode));
     SymbolTable* SymTable=(SymbolTable*)malloc(sizeof(SymbolTable));
-    OpTable->build(OPCODE);
+    OpTable ->build(OPCODE);
     SymTable->build();
 
     FILE* input  = fopen(_SourceFileName,"r");
@@ -354,8 +309,9 @@ void Pass1(const char* _SourceFileName)
     }while(strcmp(tempstr[1],"END") != 0);
     fprintf(output1,"\t\t%s\t%s","END",SymTable->findLast()->symbolname);
 
-    //delete Operation Table
-    OpTable->del();
+    //delete Operation Table and Symbol Table
+    OpTable ->del();
+    SymTable->del();
 }
 
 int main()
