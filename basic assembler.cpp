@@ -319,6 +319,7 @@ class TextRecord
         char length[3];
         char objectCode[61];
     public :
+    int  ind;           //to record the capacity of objecCode[]
     void initialize()
     {
         head='T';
@@ -329,6 +330,7 @@ class TextRecord
             objectCode[i]='\0';
         length[0]=length[1]='0';
         length[2]='\0';
+        ind=0;
     }
     void recordStart(const char* _startAddress)
     {
@@ -337,9 +339,47 @@ class TextRecord
         for(int i=len-1;i>=0;i--)
             startingAddress[ind--]=_startAddress[i];
     }
-    bool isFull()
+    void recordLength(const char* _Length)
     {
         
+    }
+    char* getAddress()
+    {
+        return startingAddress;
+    }
+    void recordLength(unsigned int _Length)
+    {
+        char* temp=HexToStr(_Length);
+        length[0]=temp[2];
+        length[1]=temp[3];
+        free(temp);
+    }
+    void recordLength()
+    {
+        unsigned int _Length=strlen(objectCode)>>1;
+        char* temp=HexToStr(_Length);
+        length[0]=temp[2];
+        length[1]=temp[3];
+        free(temp);
+    }
+    void write(FILE* output)
+    {
+        fprintf(output,"%c%s%s%s\n",head,startingAddress,length,objectCode);
+    }
+    bool isFull(unsigned int length)
+    {
+        if(ind + length> 60)
+            return true;
+        return false;
+    }
+    void addObjcode(const char* obj)
+    {
+        ind+=strlen(obj);
+        strcat(objectCode,obj);
+    }
+    void del()
+    {
+        free(this);
     }
 };
 class EndRecord
@@ -529,6 +569,9 @@ void Pass2(const char* _LocationFileName,const char* _SymbolTableFileName,unsign
      *  tempstr[3] for Operand
      */
     char c; int i=0,j=0;
+    //Create a Text record to process
+    TextRecord* text=(TextRecord*)malloc(sizeof(TextRecord));
+    text->initialize();
     do
     {
         c = fgetc(input);
@@ -546,6 +589,8 @@ void Pass2(const char* _LocationFileName,const char* _SymbolTableFileName,unsign
                 rec->write(output4);
                 rec->del();
                 free(temp);
+                //give Text record starting address
+                text->recordStart(tempstr[3]);
             }
             else
             {
@@ -614,6 +659,20 @@ void Pass2(const char* _LocationFileName,const char* _SymbolTableFileName,unsign
                 
                 fprintf(output3,"\t%s\n",objcode);
 
+                //if object code won't fit into the current Text record
+                if(text->isFull(strlen(objcode))||(objcode[0]=='\0'&&text->ind>0))
+                {
+                    //record length
+                    text->recordLength();
+                    //write line to final object file
+                    text->write(output4);
+                    //Initailize Text record
+                    text->initialize();
+                    //record next Starting Address
+                    text->recordStart(tempstr[0]);
+                }
+                //add object code to Text record
+                text->addObjcode(objcode);
 
             }
             
@@ -629,9 +688,15 @@ void Pass2(const char* _LocationFileName,const char* _SymbolTableFileName,unsign
             sprintf(tempstr[j],"%s%c",tempstr[j],c);
         }
     }while(strcmp(tempstr[2],"END") != 0);
+    //write last to lisiting file
     fprintf(output3,"\t\t%s\t%s","END",SymTable->findLast()->symbolname);
 
-    //
+    //write last Text record to final object file
+    text->recordLength();
+    text->write(output4);
+    text->del();
+
+    //write End record to final object file
     char* endadd=HexToStr(SymTable->findLast()->address);
     EndRecord* end=(EndRecord*)malloc(sizeof(EndRecord));
     end->build(endadd);
