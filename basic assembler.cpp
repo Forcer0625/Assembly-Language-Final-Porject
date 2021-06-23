@@ -339,20 +339,9 @@ class TextRecord
         for(int i=len-1;i>=0;i--)
             startingAddress[ind--]=_startAddress[i];
     }
-    void recordLength(const char* _Length)
-    {
-        
-    }
     char* getAddress()
     {
         return startingAddress;
-    }
-    void recordLength(unsigned int _Length)
-    {
-        char* temp=HexToStr(_Length);
-        length[0]=temp[2];
-        length[1]=temp[3];
-        free(temp);
     }
     void recordLength()
     {
@@ -470,6 +459,7 @@ unsigned int Pass1(const char* _SourceFileName)
                     }
                     else
                     {
+                        //save symbol and its location
                         SymTable->addSymbol(tempstr[0],LOCCTR);
                         fprintf(output2,"%s\t%X\n",tempstr[0],LOCCTR);
                     }
@@ -533,6 +523,7 @@ unsigned int Pass1(const char* _SourceFileName)
             sprintf(tempstr[j],"%s%c",tempstr[j],c);
         }
     }while(strcmp(tempstr[1],"END") != 0);
+    //write last to listing file
     fprintf(output1,"\t\t%s\t%s","END",SymTable->findLast()->symbolname);
 
     //close file
@@ -544,14 +535,15 @@ unsigned int Pass1(const char* _SourceFileName)
     OpTable ->del();
     SymTable->del();
 
+    //return program length
     return LOCCTR-START_Address;
 }
-//This Function will create each statement's objetcode.
+//This Function will create each statement's objetcode and object file.
 void Pass2(const char* _LocationFileName,const char* _SymbolTableFileName,unsigned int _ProgramLength)
 {
     //Create Operation Table and Symbol Table
-    OperationCode* OpTable=(OperationCode*)malloc(sizeof(OperationCode));
-    SymbolTable* SymTable=(SymbolTable*)malloc(sizeof(SymbolTable));
+    OperationCode*  OpTable =(OperationCode*)malloc(sizeof(OperationCode));
+    SymbolTable*    SymTable=(SymbolTable*)  malloc(sizeof(SymbolTable));
     OpTable ->build(OPCODE);
     SymTable->build(_SymbolTableFileName);
 
@@ -607,8 +599,9 @@ void Pass2(const char* _LocationFileName,const char* _SymbolTableFileName,unsign
                         Symbol* symbol;
 
                         //remove ,X to get real symbol
+                        bool indexed_address=false; //check if indexed addressing mode
                         for(int i=0;i<strlen(tempstr[3]);i++)
-                        if(tempstr[3][i]==',')  {tempstr[3][i]='\0';break;}
+                        if(tempstr[3][i]==',')  {tempstr[3][i]='\0';indexed_address=true;break;}
 
                         if(symbol=SymTable->query(tempstr[3]))
                         {
@@ -617,6 +610,12 @@ void Pass2(const char* _LocationFileName,const char* _SymbolTableFileName,unsign
                             strcpy(tempstr[3],trans);
                             free(trans);
                             strcat(objcode,tempstr[3]);
+                            if(indexed_address) objcode[2]+=0b1000;
+                            /*  for indexed-addressing mode :
+                             *  8 bits      1 bit   15 bits
+                             *  [opcode]    [x]     [address]
+                             *  so objcode[2] plus 0b1000
+                             */
                         }
                         else
                         {
@@ -713,21 +712,10 @@ void Pass2(const char* _LocationFileName,const char* _SymbolTableFileName,unsign
     SymTable->del();
 
 }
+
 int main()
 {
-    //OperationCode* OpTable=(OperationCode*)malloc(sizeof(OperationCode));
-    //OpTable->OPcode_Read(fopen(OPCODE,"r"));
-    //Operation* temp=OpTable->query("COMP");
-    //printf("\n%X\n",temp->code);
-    //printf("\ntransfered : %d\n",StrAdd_To_unsiginedInt("3C"));
-    
-    //unsigned int t=StrToDec("");
-    //printf("%u\n",t);
-    //char* temp=HexToStr(0x460);
-    //printf("%s\n",temp);
-
     unsigned int _ProgramLength=Pass1(SOURCE);
-    //printf("%X",_ProgramLength);
     Pass2(OUTPUT1,OUTPUT2,_ProgramLength);
 
     system("PAUSE");
