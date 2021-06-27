@@ -10,10 +10,9 @@ using namespace std;
 #define OUTPUT2 "PASS1_symbol_table.txt"
 #define OUTPUT3 "PASS2_object_code.txt"
 #define OUTPUT4 "PASS2_final_object_program.txt"
-#define SOURCE_FORMAT "%s\t%s\t%X\n" //failed
+#define SOURCE_FORMAT "%s\t%s\t%X\n"
 #define OPCODE_FORMAT "%s %c%c\n"
 #define SYMBOL_FORMAT "%s\t%X\n"
-#define C_EOF "454F46"
 
 
 unsigned int pow(unsigned int base,int power)
@@ -486,20 +485,26 @@ unsigned int Pass1(const char* _SourceFileName)
                 else if(!strcmp(tempstr[1],"BYTE"))
                 {
                     //BYTE=>convert constant length in byte
-                    if(!strcmp("C\'EOF\'",tempstr[2]))
-                        strcpy(tempstr[2],C_EOF);
-                    else
-                    {
-                        //find the constant in ' '
-                        char constant[5] = {'\0'};
-                        int i=0,len=strlen(tempstr[2]);
-                        for(;i<len;i++) if(tempstr[2][i]=='\'') break;
-                        for(int j=0;tempstr[2][++i]!='\'';j++) constant[j]=tempstr[2][i];
-                        strcpy(tempstr[2],constant);
-                    }
-                    //2 hex bit for 1 byte
-                    unsigned int constant_length=strlen(tempstr[2])>>1;
+                    char readformat=tempstr[2][0];
+                    unsigned int constant_length;
+                    //find the constant in ' '
+                    char constant[5] = {'\0'};
+                    int i=0,len=strlen(tempstr[2]);
+                    for(;i<len;i++) if(tempstr[2][i]=='\'') break;
+                    for(int j=0;tempstr[2][++i]!='\'';j++) constant[j]=tempstr[2][i];
+                    strcpy(tempstr[2],constant);
+
+                    
+                    if(/*read in char*/
+                        readformat == 'C')
+                        constant_length=strlen(tempstr[2]);     //1 char for 1 byte
+                    else if(/*read in hex format*/
+                        readformat == 'X')
+                        constant_length=strlen(tempstr[2])>>1;  //2 hex bit for 1 byte
+
+                    //add constant length
                     LOCCTR += constant_length;
+                    
                 }
                 else
                 {
@@ -634,16 +639,33 @@ void Pass2(const char* _LocationFileName,const char* _SymbolTableFileName,unsign
                 }
                 else if(!strcmp("BYTE",tempstr[2]))
                 {
+                    char readformat=tempstr[3][0];
+
+                    //find the constant in ' '
+                    char constant[5] = {'\0'};
+                    int i=0,len=strlen(tempstr[3]);
+                    for(;i<len;i++) if(tempstr[3][i]=='\'') break;
+                    for(int j=0;tempstr[3][++i]!='\'';j++) constant[j]=tempstr[3][i];
+                    //strcpy(tempstr[3],constant);
+
                     //covert constant to object code
-                    if(!strcmp("C\'EOF\'",tempstr[3]))
-                        strcpy(objcode,C_EOF);
-                    else
+                    if(readformat == 'X')
                     {
-                        //find the constant in ' '
-                        int i=0,len=strlen(tempstr[3]);
-                        for(;i<len;i++) if(tempstr[3][i]=='\'') break;
-                        for(int j=0;tempstr[3][++i]!='\'';j++) objcode[j]=tempstr[3][i];
+                        strcat(objcode,constant);
                     }
+                    else if(readformat == 'C')
+                    {
+                        for(int i=0;i<strlen(constant);i++)
+                        {
+                            char charformat[3]={'\0'};
+                            char* convert=HexToStr(constant[i]);
+                            //2 hex for 1 byte for 1 char
+                            charformat[0]=convert[2];
+                            charformat[1]=convert[3];
+                            strcat(objcode,charformat);
+                        }
+                    }
+                    
                 }
                 else if(!strcmp("WORD",tempstr[2]))
                 {
